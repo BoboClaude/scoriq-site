@@ -305,7 +305,7 @@
 <body>
 <header>
   <h1>Scor<span>iq</span></h1>
-  <span class="powered">Powered by Claude · <a href="#" onclick="showView('terms'); return false;" style="color:var(--muted);">Terms</a></span>
+  <span class="powered">Powered by Claude · <a href="#" onclick="showView('terms'); return false;" style="color:var(--muted);">Terms</a> · <a href="#" onclick="showView('privacy'); return false;" style="color:var(--muted);">Privacy</a></span>
   <nav>
     <button class="tab active" data-view="home">Matches</button>
     <button class="tab" data-view="fbl">Fantasy betting league</button>
@@ -621,6 +621,107 @@
       reviewed by a lawyer. If Scoriq is offered publicly, have it reviewed professionally.</p>
     </div>
     <button type="button" class="secondary" style="width:auto; margin-top:14px;" onclick="showView('home')">‹ Back</button>
+  </div>
+</div>
+
+<!-- PRIVACY POLICY -->
+<div id="privacyView" style="display:none;">
+  <div class="card" style="max-width:780px; margin:0 auto;">
+    <h2 style="font-size:18px; text-transform:none; letter-spacing:0; color:var(--text);">Privacy &amp; Cookie Policy</h2>
+    <div style="font-size:13px; color:var(--muted); line-height:1.75;">
+      <p style="margin-bottom:10px;"><i>Last updated: 17 July 2026</i></p>
+
+      <p><b>1. Who we are.</b> Scoriq is a free, play-money football simulation tool operated from Sweden.
+      The data controller for any personal data processed through Scoriq can be reached at
+      <b>ornsten@gmail.com</b>. This policy explains what data Scoriq handles, where it lives, and the
+      choices you have. It supplements the <a href="#" onclick="showView('terms'); return false;"
+      style="color:var(--accent2);">Terms of Service</a>.</p>
+
+      <p><b>2. Data stored only on your device.</b> Scoriq is designed local-first. Unless you enable
+      online play, everything stays in your browser's local storage on your own device and is never sent
+      to us: your simulation history and journal, play-money bankroll and bet history, search history,
+      data-source preferences and API keys you enter, cached sports data and odds, and your account
+      profile if you use a local-only account. We cannot see, access or recover this data. You can erase
+      it at any time by deleting your account in the app or clearing your browser's site data.</p>
+
+      <p><b>3. Data stored in the cloud (online play only).</b> If you create a cloud account or enable
+      online play for friendly leagues, the following is stored on our database provider Supabase
+      (hosted in the EU, Stockholm region): your email address, chosen username, a securely hashed
+      password (we never see or store the plain password), and your league activity — memberships,
+      play-money bet slates, results and activity-feed entries. League names and activity are visible to
+      members of your league; your email is never shown to other users.</p>
+
+      <p><b>4. Purposes and legal bases (GDPR).</b> We process this data solely to provide the service
+      you asked for — signing you in, running your leagues, settling play-money bets and showing
+      leaderboards (Art. 6(1)(b) GDPR, performance of a contract) — and to keep the service secure and
+      prevent abuse (Art. 6(1)(f), legitimate interest). We do not use your data for advertising or
+      profiling, we run no analytics or tracking scripts, and we never sell or rent personal data.</p>
+
+      <p><b>5. Third-party requests your browser makes.</b> To show live sports data, your browser (or
+      our proxy server on your behalf) requests data from: ESPN, openfootball/GitHub, TheSportsDB,
+      Wikidata, Open-Meteo (weather — receives only stadium coordinates, never your location),
+      Football-Data.org and The Odds API (via our proxy), Supabase (accounts and leagues), and GitHub
+      Pages (which hosts this site). Like any web request, these services technically receive your IP
+      address and browser information; Scoriq sends them no account data. Their own privacy policies
+      apply to their processing.</p>
+
+      <p><b>6. Cookies and local storage.</b> Scoriq sets <b>no advertising or tracking cookies</b> and
+      no third-party analytics. We use browser <b>local storage</b> (a cookie-like technology) strictly
+      for the site to function: keeping you signed in (Supabase session token), remembering your
+      preferences and data-source toggles, caching sports data and odds so pages load faster and API
+      limits aren't wasted, and holding your local simulation and play-money history (see section 2).
+      Under the EU ePrivacy rules this storage is "strictly necessary", which is why we show a notice
+      rather than a consent pop-up. Our hosting provider (GitHub Pages) may set technically necessary
+      cookies of its own. You can clear or block storage in your browser settings; the site will still
+      load but sign-in, history and caching will not work.</p>
+
+      <p><b>7. Retention.</b> Local data stays on your device until you delete it. Cloud data is kept
+      while your account exists; deleting your account removes your profile and dissociates your league
+      history. Server-side caches of sports data (never personal data) expire automatically within hours.</p>
+
+      <p><b>8. Your rights.</b> Under the GDPR you may request access to, rectification, erasure or
+      export of your personal data, restrict or object to processing, and withdraw consent where
+      processing is based on it. Most of this you can do yourself in the app (edit or delete your
+      account); for anything else email <b>ornsten@gmail.com</b> and we will respond within one month.
+      You also have the right to lodge a complaint with a supervisory authority — in Sweden, the Swedish
+      Authority for Privacy Protection (IMY, imy.se), or the authority of your country of residence.</p>
+
+      <p><b>9. Children.</b> Scoriq presents betting-themed content and is not directed at anyone under
+      18. We do not knowingly process children's data; if you believe a minor has created an account,
+      contact us and we will delete it.</p>
+
+      <p><b>10. Security.</b> Cloud data is protected by encryption in transit (HTTPS), hashed passwords,
+      and row-level security rules so users can only read data belonging to their own leagues. API keys
+      for third-party data are kept server-side and are never exposed in this website's code. No system
+      is perfectly secure; use a unique password and keep it confidential.</p>
+
+      <p><b>11. International transfers.</b> Account and league data is stored in the EU. Requests to
+      third-party sports-data services (section 5) may be answered from servers outside the EU/EEA;
+      those requests contain no account data.</p>
+
+      <p><b>12. Changes.</b> We may update this policy as the service evolves; material changes will be
+      indicated by the date above and, where appropriate, an in-app notice.</p>
+
+      <p><b>13. Contact.</b> Privacy questions or requests: <b>ornsten@gmail.com</b>.</p>
+
+      <p style="color:var(--warn);">Note: this is a template drafted with AI assistance and has not been
+      reviewed by a lawyer. If Scoriq is offered publicly, have it reviewed professionally.</p>
+    </div>
+    <button type="button" class="secondary" style="width:auto; margin-top:14px;" onclick="showView('home')">‹ Back</button>
+  </div>
+</div>
+
+<!-- COOKIE / STORAGE NOTICE -->
+<div id="cookieBar" style="display:none; position:fixed; left:0; right:0; bottom:0; z-index:400;
+  background:var(--panel); border-top:1px solid var(--border); padding:12px 18px;
+  box-shadow:0 -6px 24px rgba(0,0,0,.45);">
+  <div style="max-width:980px; margin:0 auto; display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+    <span style="font-size:13px; color:var(--muted); flex:1; min-width:240px; line-height:1.5;">
+      🍪 Scoriq uses <b>no tracking or advertising cookies</b> — only strictly necessary browser storage
+      for sign-in, preferences and data caching.
+      <a href="#" onclick="showView('privacy'); return false;" style="color:var(--accent2);">Learn more</a>
+    </span>
+    <button type="button" style="width:auto; padding:8px 22px;" onclick="cookieOk()">OK</button>
   </div>
 </div>
 
@@ -1987,7 +2088,8 @@ function renderAccount(){
         <input type="password" id="suPw" onkeydown="if(event.key==='Enter')createAccount()">
         <button onclick="createAccount()">Create account</button>
         <div class="status-note" style="text-align:center;">By creating an account you agree to the
-          <a href="#" onclick="showView('terms'); return false;" style="color:var(--accent2);">Terms of Service</a>.
+          <a href="#" onclick="showView('terms'); return false;" style="color:var(--accent2);">Terms of Service</a>
+          and <a href="#" onclick="showView('privacy'); return false;" style="color:var(--accent2);">Privacy Policy</a>.
           18+ only — Scoriq is play money, not gambling.</div>
         <div class="form-msg" id="suMsg"></div>
       </div>`;
@@ -3666,6 +3768,16 @@ function lgPanelHtml(){
   </div>`;
 }
 
+// ---------- Cookie / storage notice ----------
+function cookieOk(){
+  try { localStorage.setItem('scoriq_cookie_ok', '1'); } catch(e){}
+  $('cookieBar').style.display = 'none';
+}
+try {
+  if(!localStorage.getItem('scoriq_cookie_ok'))
+    document.addEventListener('DOMContentLoaded', ()=>{ $('cookieBar').style.display='block'; });
+} catch(e){}
+
 // ---------- Views ----------
 function showView(v){
   $('homeView').style.display    = v==='home'    ? 'block' : 'none';
@@ -3673,6 +3785,7 @@ function showView(v){
   $('dreamView').style.display   = v==='dream'   ? 'block' : 'none';
   $('fblView').style.display     = v==='fbl'     ? 'block' : 'none';
   $('termsView').style.display   = v==='terms'   ? 'block' : 'none';
+  $('privacyView').style.display = v==='privacy' ? 'block' : 'none';
   $('accountView').style.display = v==='account' ? 'block' : 'none';
   document.querySelectorAll('.tab[data-view]').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
   if(v==='sim' && !teams.length) loadTeams();  // auto-load on first visit
