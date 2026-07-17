@@ -381,6 +381,16 @@
         <option value="SA">Serie A</option>
         <option value="BL1">Bundesliga</option>
         <option value="FL1">Ligue 1</option>
+        <option value="ELC">Championship</option>
+        <option value="DED">Eredivisie</option>
+        <option value="PPL">Primeira Liga</option>
+        <option value="BSA">Brasileirão</option>
+        <option value="MLS">MLS</option>
+        <option value="LMX">Liga MX</option>
+        <option value="ARG">Liga Profesional</option>
+        <option value="TUR">Süper Lig</option>
+        <option value="SCO">Premiership</option>
+        <option value="BEL">Pro League</option>
       </select>
       <select id="homeTeam" style="display:none;"></select>
       <select id="awayTeam" style="display:none;"></select>
@@ -749,13 +759,27 @@ const LEAGUES = {
   PD:  {fd:'PD',  name:'La Liga'},
   SA:  {fd:'SA',  name:'Serie A'},
   BL1: {fd:'BL1', name:'Bundesliga'},
-  FL1: {fd:'FL1', name:'Ligue 1'}
+  FL1: {fd:'FL1', name:'Ligue 1'},
+  ELC: {fd:'ELC', name:'Championship'},
+  DED: {fd:'DED', name:'Eredivisie'},
+  PPL: {fd:'PPL', name:'Primeira Liga'},
+  BSA: {fd:'BSA', name:'Brasileirão'},
+  MLS: {fd:'',    name:'MLS'},
+  LMX: {fd:'',    name:'Liga MX'},
+  ARG: {fd:'',    name:'Liga Profesional'},
+  TUR: {fd:'',    name:'Süper Lig'},
+  SCO: {fd:'',    name:'Premiership'},
+  BEL: {fd:'',    name:'Pro League'}
 };
 // League scoring priors (avg home / away goals per game) derived from historical
 // StatsBomb / FBref data — used for Bayesian shrinkage early in a season.
 const PRIORS = {
   PL:{h:1.60,a:1.30}, PD:{h:1.55,a:1.15}, SA:{h:1.50,a:1.20},
-  BL1:{h:1.75,a:1.40}, FL1:{h:1.50,a:1.15}
+  BL1:{h:1.75,a:1.40}, FL1:{h:1.50,a:1.15},
+  ELC:{h:1.45,a:1.15}, DED:{h:1.75,a:1.40}, PPL:{h:1.50,a:1.15},
+  BSA:{h:1.45,a:1.05}, MLS:{h:1.70,a:1.35}, LMX:{h:1.55,a:1.25},
+  ARG:{h:1.30,a:1.00}, TUR:{h:1.60,a:1.30}, SCO:{h:1.55,a:1.25},
+  BEL:{h:1.60,a:1.30}
 };
 const SHRINK_GAMES = 6; // weight of prior, in "virtual games"
 
@@ -821,9 +845,12 @@ async function fdFetch(path){
 }
 
 // ---------- openfootball (GitHub, CORS-friendly, no key) ----------
-const OPENFOOTBALL = {PL:'en.1', PD:'es.1', SA:'it.1', BL1:'de.1', FL1:'fr.1'};
-const TSDB = {PL:4328, PD:4335, SA:4332, BL1:4331, FL1:4334};
-const ESPN = {PL:'eng.1', PD:'esp.1', SA:'ita.1', BL1:'ger.1', FL1:'fra.1'};
+const OPENFOOTBALL = {PL:'en.1', PD:'es.1', SA:'it.1', BL1:'de.1', FL1:'fr.1', ELC:'en.2'};
+const TSDB = {PL:4328, PD:4335, SA:4332, BL1:4331, FL1:4334, ELC:4329, DED:4337,
+              PPL:4344, BSA:4351, MLS:4346, LMX:4350, ARG:4406, TUR:4339, SCO:4330, BEL:4338};
+const ESPN = {PL:'eng.1', PD:'esp.1', SA:'ita.1', BL1:'ger.1', FL1:'fra.1',
+              ELC:'eng.2', DED:'ned.1', PPL:'por.1', BSA:'bra.1', MLS:'usa.1',
+              LMX:'mex.1', ARG:'arg.1', TUR:'tur.1', SCO:'sco.1', BEL:'bel.1'};
 
 function seasonFolders(){
   const now = new Date();
@@ -977,6 +1004,7 @@ async function fetchLeagueTeams(code){
   const lg = LEAGUES[code];
   try {
     if(!srcEnabled.fd) throw new Error('turned off');
+    if(!lg.fd) throw new Error('not on football-data.org');
     setSrc('fd', null, 'fetching…');
     let r = await loadFromFootballData(lg.fd);
     let msg = '';
@@ -2223,7 +2251,12 @@ function marketOdds(fair, key){
 }
 // ---------- The Odds API: multi-bookmaker line shopping (cached hard — 500 credits/month) ----------
 const OA_SPORT = {PL:'soccer_epl', PD:'soccer_spain_la_liga', SA:'soccer_italy_serie_a',
-                  BL1:'soccer_germany_bundesliga', FL1:'soccer_france_ligue_one'};
+                  BL1:'soccer_germany_bundesliga', FL1:'soccer_france_ligue_one',
+                  ELC:'soccer_efl_champ', DED:'soccer_netherlands_eredivisie',
+                  PPL:'soccer_portugal_primeira_liga', BSA:'soccer_brazil_campeonato',
+                  MLS:'soccer_usa_mls', LMX:'soccer_mexico_ligamx',
+                  ARG:'soccer_argentina_primera_division', TUR:'soccer_turkey_super_league',
+                  SCO:'soccer_spl', BEL:'soccer_belgium_first_div'};
 async function oddsApiLeague(code){
   if(!srcEnabled.oa || !OA_SPORT[code]) return null;
   const ck = 'scoriq_oa_'+code;
@@ -3863,7 +3896,9 @@ function showView(v){
 }
 
 // ---------- League pills ----------
-const FLAGS = {PL:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', PD:'🇪🇸', SA:'🇮🇹', BL1:'🇩🇪', FL1:'🇫🇷'};
+const FLAGS = {PL:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', PD:'🇪🇸', SA:'🇮🇹', BL1:'🇩🇪', FL1:'🇫🇷',
+               ELC:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', DED:'🇳🇱', PPL:'🇵🇹', BSA:'🇧🇷', MLS:'🇺🇸',
+               LMX:'🇲🇽', ARG:'🇦🇷', TUR:'🇹🇷', SCO:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', BEL:'🇧🇪'};
 function renderLeaguePills(){
   const cur = $('league').value;
   $('lgPills').innerHTML = [...$('league').options].map(o=>
@@ -3877,7 +3912,10 @@ function renderLeaguePills(){
 }
 
 // ---------- League picker (home screen) ----------
-const COUNTRIES = {PL:'England', PD:'Spain', SA:'Italy', BL1:'Germany', FL1:'France'};
+const COUNTRIES = {PL:'England', PD:'Spain', SA:'Italy', BL1:'Germany', FL1:'France',
+                   ELC:'England', DED:'Netherlands', PPL:'Portugal', BSA:'Brazil',
+                   MLS:'USA', LMX:'Mexico', ARG:'Argentina', TUR:'Turkey',
+                   SCO:'Scotland', BEL:'Belgium'};
 let fxFilter = 'ALL';
 
 function renderLeagueGrid(){
