@@ -368,7 +368,7 @@
   <div>
     <div class="mode-toggle" style="display:flex; gap:6px; margin-bottom:16px;">
       <button type="button" class="tab" data-mode="basic">Basic</button>
-      <button type="button" class="tab" data-mode="advanced">Advanced</button>
+      <button type="button" class="tab" data-mode="advanced">Advanced ⭐</button>
     </div>
 
 
@@ -1883,7 +1883,7 @@ function logSim(entry){
   if(!account) return;
   const d = acctDb(), u = d.users[account]; if(!u) return;
   u.sims.unshift({...entry, ts:Date.now()});
-  u.sims = u.sims.slice(0,50);
+  u.sims = u.sims.slice(0, isPro() ? 500 : 20);
   acctSave(d);
 }
 function logActivity(text){
@@ -2145,11 +2145,13 @@ function renderAccount(){
         <button type="button" onclick="cloudConnect()">Enable online play</button>
         <div class="form-msg" id="ccMsg"></div>
       </div>`}
+    ${proCardHtml()}
     ${favCardHtml(u)}
     <div class="card" style="margin-top:16px;">
       <div style="display:flex; align-items:center;">
         <h2 style="margin-bottom:0;">Recent simulations</h2>
-        <button class="link-btn" style="margin-left:auto;" onclick="clearHistory('sims')">Clear</button>
+        <button class="link-btn" style="margin-left:auto;" onclick="exportSims()">Export CSV${isPro()?'':' ⭐'}</button>
+        <button class="link-btn" onclick="clearHistory('sims')">Clear</button>
       </div>
       <div style="margin-top:12px;">${sims}</div>
     </div>
@@ -2227,7 +2229,8 @@ async function oddsApiLeague(code){
   const ck = 'scoriq_oa_'+code;
   try {
     const c = JSON.parse(localStorage.getItem(ck)||'null');
-    if(c && Date.now()-c.ts < 6*3600e3){ setSrc('oa', true, 'cached'); return c.ev; }
+    const oaTtl = isPro() ? 3600e3 : 6*3600e3;   // Pro: hourly refresh; free: 6 h
+    if(c && Date.now()-c.ts < oaTtl){ setSrc('oa', true, 'cached'); return c.ev; }
   } catch(e){}
   try {
     // Personal key → straight to The Odds API; no key → the Scoriq proxy (server-cached).
@@ -2580,6 +2583,16 @@ function fblToggleProp(pid, mkt){
   if(i>=0) fblSel.props.splice(i,1);
   else {
     if(fblSel.props.length >= 3){ return; }
+    if(!isPro()){
+      // Free tier: 5 prop-leg adds per day
+      const k = 'scoriq_prop_day'; let d = {};
+      try { d = JSON.parse(localStorage.getItem(k)||'{}'); } catch(e){}
+      const today = new Date().toISOString().slice(0,10);
+      if(d.day !== today) d = {day:today, n:0};
+      if(d.n >= 5){ proUpsell('Free accounts can add 5 prop legs per day — Pro is unlimited.'); return; }
+      d.n++;
+      try { localStorage.setItem(k, JSON.stringify(d)); } catch(e){}
+    }
     const p = propState.players.find(x=>x.pid===pid);
     fblSel.props.push({pid, mkt, name:p?p.name:pid, side:p?p.side:'H'});
   }
@@ -3459,6 +3472,49 @@ function journalHtml(){
 const SB_URL = 'https://tvfcfvnlgyoukhccnqgx.supabase.co';
 const SB_KEY = 'sb_publishable_3OC1qFtJEWtXRa8_8zEFxg_ASdO0FNn';   // publishable — safe in client code
 let sb = null, sbUser = null, sbProfile = null;
+
+// ---------- Scoriq Pro ----------
+// Pro status lives server-side (profiles.is_pro, set only by the payment webhook —
+// clients cannot update it). Local-only accounts are always free tier.
+const PRO_PAYMENT_LINK = '';   // Stripe Payment Link — filled in when payments go live
+function isPro(){ return !!(sbProfile && sbProfile.is_pro); }
+function proUpsell(msg){
+  if(confirm((msg||'This is a Scoriq Pro feature.')+'\n\nOpen your account page to see what Pro includes?'))
+    showView('account');
+}
+function proUpgrade(){
+  const el = $('proMsg');
+  if(!sbUser){ if(el) el.textContent = 'Enable online play first (card above) — Pro is tied to your cloud account.'; return; }
+  if(PRO_PAYMENT_LINK){ window.open(PRO_PAYMENT_LINK, '_blank'); return; }
+  if(el) el.textContent = 'Payments aren’t live yet — Pro launches soon. Everything stays free until then.';
+}
+function proCardHtml(){
+  if(isPro()) return `<div class="card" style="margin-top:16px; padding:14px; border-color:var(--accent);">
+      ⭐ <b>Scoriq Pro is active</b> — advanced simulations, unlimited props, hourly odds and full history are unlocked. Thanks for supporting Scoriq!</div>`;
+  return `<div class="card" style="margin-top:16px;">
+      <h2>⭐ Scoriq Pro</h2>
+      <div class="status-note" style="margin-top:0;">
+        <b>Advanced mode</b> — the 1,000,000-simulation engine with weather, pitch &amp; altitude conditions ·
+        <b>Unlimited prop building</b> (free: 5 legs/day) ·
+        <b>Hourly odds refresh</b> instead of every 6 hours ·
+        <b>Full history</b> — 500 saved simulations (free: 20) with CSV export.
+        Pro sells tools, never picks or winnings — Scoriq stays play-money only.
+      </div>
+      <button type="button" onclick="proUpgrade()">Upgrade to Pro</button>
+      <div class="form-msg" id="proMsg"></div>
+    </div>`;
+}
+function exportSims(){
+  if(!isPro()){ proUpsell('CSV export is a Scoriq Pro feature.'); return; }
+  const u = acctUser(); if(!u || !u.sims.length) return;
+  const rows = [['time','type','home','away','p_home','p_draw','p_away']]
+    .concat(u.sims.map(s=>[new Date(s.ts).toISOString(), s.type||'sim', s.home, s.away, s.pW, s.pD, s.pL]));
+  const csv = rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = 'scoriq-simulations.csv'; a.click();
+}
+
 function sbInit(){
   if(!sb && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY);
   return sb;
@@ -4086,6 +4142,10 @@ function applySimMode(){
   try { localStorage.setItem('scoriq_mode', simMode); } catch(e){}
 }
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click', ()=>{
+  if(b.dataset.mode === 'advanced' && !isPro()){
+    proUpsell('Advanced mode (1,000,000 sims, weather & pitch conditions) is a Scoriq Pro feature.');
+    return;
+  }
   simMode = b.dataset.mode;
   applySimMode();
 }));
@@ -4111,7 +4171,11 @@ renderLeaguePills();
 renderLeagueGrid();
 loadFixtures();
 // Restore the cloud session (leagues) in the background
-sbRestore().then(()=>{ if(sbUser) lgRefresh().then(()=>{ if($('fblView').style.display!=='none') renderFBL(); }); });
+sbRestore().then(()=>{
+  if(sbUser) lgRefresh().then(()=>{ if($('fblView').style.display!=='none') renderFBL(); });
+  // If a free account had Advanced saved from before gating, drop back to Basic
+  if(simMode === 'advanced' && !isPro()){ simMode = 'basic'; applyMode(); }
+});
 </script>
 </body>
 </html>
