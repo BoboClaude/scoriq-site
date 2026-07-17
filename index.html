@@ -915,7 +915,18 @@ async function loadFromESPN(code){
       if(!r.ok) continue;
       d = await r.json();
     } catch(e){ continue; }
-    const entries = d.children?.[0]?.standings?.entries || [];
+    // Merge every group (conferences, zones, play-off pools) and dedupe by team,
+    // keeping the row with the most games played — MLS/Argentina/Belgium split
+    // their tables into children and reading only the first loses half the league.
+    const byName = {};
+    for(const ch of (d.children||[])){
+      for(const e of (ch.standings?.entries||[])){
+        const nm = e.team.shortDisplayName || e.team.displayName;
+        const gp = (e.stats.find(x=>x.name==='gamesPlayed')||{}).value || 0;
+        if(!byName[nm] || gp > byName[nm].gp) byName[nm] = {e, gp};
+      }
+    }
+    const entries = Object.values(byName).map(x=>x.e);
     if(!entries.length) continue;
     const stat = (e,n)=>{ const s = e.stats.find(x=>x.name===n); return s ? +s.value : 0; };
     const list = entries.map(e=>{
