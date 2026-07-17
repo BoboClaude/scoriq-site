@@ -666,8 +666,12 @@ const $ = id => document.getElementById(id);
 // Source on/off preferences + last-known status (shown in the Account view)
 const SRC_DEFAULTS = {fd:true, of:true, es:true, db:true, fbref:true, sb:true, oa:true};
 let srcEnabled = {...SRC_DEFAULTS};
-let fdApiKey = '';   // add your own free key from football-data.org in Account -> Data sources
-let oddsApiKey = '';   // add your own free key from the-odds-api.com in Account -> Data sources
+let fdApiKey = '';   // optional: add your own free key from football-data.org in Account -> Data sources
+let oddsApiKey = '';   // optional: add your own free key from the-odds-api.com in Account -> Data sources
+// Server-side proxy (Supabase Edge Function) — holds the site's own API keys as
+// secrets, only answers requests from the Scoriq website origin, and caches
+// responses for 6 h so visitors share data instead of burning API credits.
+const PROXY_URL = 'https://tvfcfvnlgyoukhccnqgx.supabase.co/functions/v1/api-proxy';
 const srcStatus = {};
 const setSrc = (src, ok, msg) => {
   srcStatus[src] = {ok, msg};
@@ -687,6 +691,11 @@ function httpMsg(status){
 // succeeds when the page is served behind a server-side proxy. openfootball /
 // TheSportsDB below are the browser-friendly fallbacks.
 async function fdFetch(path){
+  // Proxy first: works from the live site with no key and dodges the CORS block.
+  try {
+    const r = await fetch(PROXY_URL + '?api=fd&path=' + encodeURIComponent(path));
+    if(r.ok) return await r.json();
+  } catch(e){}
   const key = fdApiKey.trim();
   try {
     const r = await fetch('https://api.football-data.org/v4' + path, {headers:{'X-Auth-Token': key}});
@@ -2100,18 +2109,24 @@ function marketOdds(fair, key){
 const OA_SPORT = {PL:'soccer_epl', PD:'soccer_spain_la_liga', SA:'soccer_italy_serie_a',
                   BL1:'soccer_germany_bundesliga', FL1:'soccer_france_ligue_one'};
 async function oddsApiLeague(code){
-  if(!srcEnabled.oa || !oddsApiKey || !OA_SPORT[code]) return null;
+  if(!srcEnabled.oa || !OA_SPORT[code]) return null;
   const ck = 'scoriq_oa_'+code;
   try {
     const c = JSON.parse(localStorage.getItem(ck)||'null');
     if(c && Date.now()-c.ts < 6*3600e3){ setSrc('oa', true, 'cached'); return c.ev; }
   } catch(e){}
   try {
-    const r = await fetch(`https://api.the-odds-api.com/v4/sports/${OA_SPORT[code]}/odds`+
-      `?apiKey=${oddsApiKey}&regions=eu&markets=h2h,totals&oddsFormat=decimal`);
+    // Personal key → straight to The Odds API; no key → the Scoriq proxy (server-cached).
+    const url = oddsApiKey
+      ? `https://api.the-odds-api.com/v4/sports/${OA_SPORT[code]}/odds`+
+        `?apiKey=${oddsApiKey}&regions=eu&markets=h2h,totals&oddsFormat=decimal`
+      : PROXY_URL + '?api=odds&path=' + encodeURIComponent(
+          `/sports/${OA_SPORT[code]}/odds?regions=eu&markets=h2h,totals&oddsFormat=decimal`);
+    const r = await fetch(url);
     if(!r.ok){ setSrc('oa', false, 'HTTP '+r.status); return null; }
     const ev = await r.json();
-    setSrc('oa', true, (r.headers.get('x-requests-remaining')||'?')+' credits left');
+    const rem = r.headers.get('x-requests-remaining');
+    setSrc('oa', true, rem ? rem+' credits left' : 'via Scoriq proxy');
     try { localStorage.setItem(ck, JSON.stringify({ts:Date.now(), ev})); } catch(e){}
     return ev;
   } catch(e){ setSrc('oa', false, 'failed'); return null; }
