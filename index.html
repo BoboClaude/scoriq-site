@@ -693,10 +693,13 @@
       for the site to function: keeping you signed in (Supabase session token), remembering your
       preferences and data-source toggles, caching sports data and odds so pages load faster and API
       limits aren't wasted, and holding your local simulation and play-money history (see section 2).
-      Under the EU ePrivacy rules this storage is "strictly necessary", which is why we show a notice
-      rather than a consent pop-up. Our hosting provider (GitHub Pages) may set technically necessary
-      cookies of its own. You can clear or block storage in your browser settings; the site will still
-      load but sign-in, history and caching will not work.</p>
+      Strictly necessary storage (sign-in, your cookie choice, play-limit counters) is always on; the
+      optional categories — <b>preferences</b>, <b>data caching</b> and <b>local history</b> — can be
+      accepted, rejected or customised in the consent banner, and changed at any time via
+      <a href="#" onclick="cookieSettings(); return false;" style="color:var(--accent2);">cookie settings</a>.
+      Our hosting provider (GitHub Pages) may set technically necessary cookies of its own. You can also
+      clear or block all storage in your browser settings; the site will still load but sign-in, history
+      and caching will not work.</p>
 
       <p><b>7. Retention.</b> Local data stays on your device until you delete it. Cloud data is kept
       while your account exists; deleting your account removes your profile and dissociates your league
@@ -734,17 +737,37 @@
   </div>
 </div>
 
-<!-- COOKIE / STORAGE NOTICE -->
+<!-- COOKIE / STORAGE CONSENT -->
 <div id="cookieBar" style="display:none; position:fixed; left:0; right:0; bottom:0; z-index:400;
   background:var(--panel); border-top:1px solid var(--border); padding:12px 18px;
   box-shadow:0 -6px 24px rgba(0,0,0,.45);">
-  <div style="max-width:980px; margin:0 auto; display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
-    <span style="font-size:13px; color:var(--muted); flex:1; min-width:240px; line-height:1.5;">
-      🍪 Scoriq uses <b>no tracking or advertising cookies</b> — only strictly necessary browser storage
-      for sign-in, preferences and data caching.
-      <a href="#" onclick="showView('privacy'); return false;" style="color:var(--accent2);">Learn more</a>
-    </span>
-    <button type="button" style="width:auto; padding:8px 22px;" onclick="cookieOk()">OK</button>
+  <div style="max-width:980px; margin:0 auto;">
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <span style="font-size:13px; color:var(--muted); flex:1; min-width:240px; line-height:1.5;">
+        🍪 Scoriq sets <b>no tracking or advertising cookies</b>. Necessary storage (sign-in, this choice)
+        is always on; the optional categories are yours to decide.
+        <a href="#" onclick="showView('privacy'); return false;" style="color:var(--accent2);">Learn more</a>
+      </span>
+      <button type="button" class="secondary" style="width:auto; padding:8px 16px;" onclick="cookieCustomize()">Customize</button>
+      <button type="button" class="secondary" style="width:auto; padding:8px 16px;" onclick="cookieChoice(false)">Only necessary</button>
+      <button type="button" style="width:auto; padding:8px 18px;" onclick="cookieChoice(true)">Accept all</button>
+    </div>
+    <div id="cookieCust" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);
+      font-size:13px; color:var(--muted);">
+      <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+        <input type="checkbox" checked disabled style="width:auto;"> <b>Necessary</b> — sign-in session, this cookie choice, prop-limit counters. Always on.
+      </label>
+      <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+        <input type="checkbox" id="ccPrefs" style="width:auto;"> <b>Preferences</b> — remembers settings like Basic/Advanced mode between visits.
+      </label>
+      <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+        <input type="checkbox" id="ccCache" style="width:auto;"> <b>Data caching</b> — stores fetched odds locally so pages load faster and API limits aren't wasted.
+      </label>
+      <label style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+        <input type="checkbox" id="ccHist" style="width:auto;"> <b>Local history</b> — saves your simulation and search history on this device.
+      </label>
+      <button type="button" style="width:auto; padding:8px 18px;" onclick="cookieSaveCust()">Save choices</button>
+    </div>
   </div>
 </div>
 
@@ -1925,14 +1948,14 @@ function clearHistory(kind){
   acctSave(d); renderAccount();
 }
 function logSim(entry){
-  if(!account) return;
+  if(!account || !consent.history) return;
   const d = acctDb(), u = d.users[account]; if(!u) return;
   u.sims.unshift({...entry, ts:Date.now()});
   u.sims = u.sims.slice(0, isPro() ? 500 : 20);
   acctSave(d);
 }
 function logActivity(text){
-  if(!account) return;
+  if(!account || !consent.history) return;
   const d = acctDb(), u = d.users[account]; if(!u) return;
   if(u.activity[0] && u.activity[0].text === text) return;   // skip immediate repeats
   u.activity.unshift({text, ts:Date.now()});
@@ -2277,7 +2300,7 @@ const OA_SPORT = {PL:'soccer_epl', PD:'soccer_spain_la_liga', SA:'soccer_italy_s
 async function oddsApiLeague(code){
   if(!srcEnabled.oa || !OA_SPORT[code]) return null;
   const ck = 'scoriq_oa_'+code;
-  try {
+  if(consent.cache) try {
     const c = JSON.parse(localStorage.getItem(ck)||'null');
     const oaTtl = isPro() ? 3600e3 : 6*3600e3;   // Pro: hourly refresh; free: 6 h
     if(c && Date.now()-c.ts < oaTtl){ setSrc('oa', true, 'cached'); return c.ev; }
@@ -2294,7 +2317,7 @@ async function oddsApiLeague(code){
     const ev = await r.json();
     const rem = r.headers.get('x-requests-remaining');
     setSrc('oa', true, rem ? rem+' credits left' : 'via Scoriq proxy');
-    try { localStorage.setItem(ck, JSON.stringify({ts:Date.now(), ev})); } catch(e){}
+    if(consent.cache) try { localStorage.setItem(ck, JSON.stringify({ts:Date.now(), ev})); } catch(e){}
     return ev;
   } catch(e){ setSrc('oa', false, 'failed'); return null; }
 }
@@ -3886,14 +3909,57 @@ function lgPanelHtml(){
   </div>`;
 }
 
-// ---------- Cookie / storage notice ----------
-function cookieOk(){
-  try { localStorage.setItem('scoriq_cookie_ok', '1'); } catch(e){}
+// ---------- Cookie / storage consent ----------
+// Three optional categories the app genuinely honors; necessary storage is always on.
+const CONSENT_KEY = 'scoriq_consent';
+let consent = {prefs:true, cache:true, history:true};
+try {
+  const c = JSON.parse(localStorage.getItem(CONSENT_KEY)||'null');
+  if(c) consent = {prefs:!!c.prefs, cache:!!c.cache, history:!!c.history};
+} catch(e){}
+function consentSave(){
+  try { localStorage.setItem(CONSENT_KEY, JSON.stringify(consent)); } catch(e){}
   $('cookieBar').style.display = 'none';
 }
+function consentScrub(){
+  // Remove already-stored data for categories the user just switched off
+  try {
+    if(!consent.cache) Object.keys(localStorage).filter(k=>k.startsWith('scoriq_oa_')).forEach(k=>localStorage.removeItem(k));
+    if(!consent.prefs) localStorage.removeItem('scoriq_mode');
+    if(!consent.history && account){
+      const d = acctDb();
+      if(d.users[account]){ d.users[account].sims = []; d.users[account].activity = []; acctSave(d); }
+    }
+  } catch(e){}
+}
+function cookieChoice(all){
+  consent = {prefs:all, cache:all, history:all};
+  consentSave(); if(!all) consentScrub();
+}
+function cookieCustomize(){
+  const el = $('cookieCust');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+  $('ccPrefs').checked = consent.prefs; $('ccCache').checked = consent.cache; $('ccHist').checked = consent.history;
+}
+function cookieSaveCust(){
+  consent = {prefs:$('ccPrefs').checked, cache:$('ccCache').checked, history:$('ccHist').checked};
+  consentSave(); consentScrub();
+}
+function cookieSettings(){
+  // Reopen the banner (e.g. from the privacy page) to change an earlier choice
+  $('cookieBar').style.display = 'block';
+  $('cookieCust').style.display = 'none';
+  cookieCustomize();
+}
 try {
-  if(!localStorage.getItem('scoriq_cookie_ok'))
-    document.addEventListener('DOMContentLoaded', ()=>{ $('cookieBar').style.display='block'; });
+  if(!localStorage.getItem(CONSENT_KEY)){
+    if(localStorage.getItem('scoriq_cookie_ok')){
+      // Migrated from the old OK-only notice — keep everything on, silently
+      localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+    } else {
+      document.addEventListener('DOMContentLoaded', ()=>{ $('cookieBar').style.display='block'; });
+    }
+  }
 } catch(e){}
 
 // ---------- Views ----------
@@ -4194,7 +4260,7 @@ function applySimMode(){
   $('simView').classList.toggle('basic', simMode === 'basic');
   document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active', b.dataset.mode === simMode));
   $('simBtn').textContent = simMode === 'advanced' ? 'Run 1,000,000 simulations' : 'Run 10,000 simulations';
-  try { localStorage.setItem('scoriq_mode', simMode); } catch(e){}
+  if(consent.prefs) try { localStorage.setItem('scoriq_mode', simMode); } catch(e){}
 }
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click', ()=>{
   if(b.dataset.mode === 'advanced' && !isPro()){
