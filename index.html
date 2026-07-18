@@ -391,6 +391,7 @@
         <option value="TUR">Süper Lig</option>
         <option value="SCO">Premiership</option>
         <option value="BEL">Pro League</option>
+        <option value="WC">World Cup</option>
       </select>
       <select id="homeTeam" style="display:none;"></select>
       <select id="awayTeam" style="display:none;"></select>
@@ -769,7 +770,8 @@ const LEAGUES = {
   ARG: {fd:'',    name:'Liga Profesional'},
   TUR: {fd:'',    name:'Süper Lig'},
   SCO: {fd:'',    name:'Premiership'},
-  BEL: {fd:'',    name:'Pro League'}
+  BEL: {fd:'',    name:'Pro League'},
+  WC:  {fd:'WC',  name:'World Cup'}
 };
 // League scoring priors (avg home / away goals per game) derived from historical
 // StatsBomb / FBref data — used for Bayesian shrinkage early in a season.
@@ -779,7 +781,7 @@ const PRIORS = {
   ELC:{h:1.45,a:1.15}, DED:{h:1.75,a:1.40}, PPL:{h:1.50,a:1.15},
   BSA:{h:1.45,a:1.05}, MLS:{h:1.70,a:1.35}, LMX:{h:1.55,a:1.25},
   ARG:{h:1.30,a:1.00}, TUR:{h:1.60,a:1.30}, SCO:{h:1.55,a:1.25},
-  BEL:{h:1.60,a:1.30}
+  BEL:{h:1.60,a:1.30}, WC:{h:1.30,a:1.15}
 };
 const SHRINK_GAMES = 6; // weight of prior, in "virtual games"
 
@@ -847,10 +849,12 @@ async function fdFetch(path){
 // ---------- openfootball (GitHub, CORS-friendly, no key) ----------
 const OPENFOOTBALL = {PL:'en.1', PD:'es.1', SA:'it.1', BL1:'de.1', FL1:'fr.1', ELC:'en.2'};
 const TSDB = {PL:4328, PD:4335, SA:4332, BL1:4331, FL1:4334, ELC:4329, DED:4337,
-              PPL:4344, BSA:4351, MLS:4346, LMX:4350, ARG:4406, TUR:4339, SCO:4330, BEL:4338};
+              PPL:4344, BSA:4351, MLS:4346, LMX:4350, ARG:4406, TUR:4339, SCO:4330, BEL:4338,
+              WC:4429};
 const ESPN = {PL:'eng.1', PD:'esp.1', SA:'ita.1', BL1:'ger.1', FL1:'fra.1',
               ELC:'eng.2', DED:'ned.1', PPL:'por.1', BSA:'bra.1', MLS:'usa.1',
-              LMX:'mex.1', ARG:'arg.1', TUR:'tur.1', SCO:'sco.1', BEL:'bel.1'};
+              LMX:'mex.1', ARG:'arg.1', TUR:'tur.1', SCO:'sco.1', BEL:'bel.1',
+              WC:'fifa.world'};
 
 function seasonFolders(){
   const now = new Date();
@@ -986,7 +990,9 @@ async function fixturesFromESPN(){
 async function loadFromFootballData(code, season){
   const data = await fdFetch(`/competitions/${code}/standings` + (season ? `?season=${season}` : ''));
   const startYear = new Date(data.season?.startDate || Date.now()).getFullYear();
-  const get = t => (data.standings.find(s=>s.type===t)||{}).table||[];
+  // Merge every table of the requested type — tournaments (e.g. the World Cup)
+  // publish one TOTAL table per group, and taking only the first loses the rest.
+  const get = t => data.standings.filter(s=>s.type===t).flatMap(s=>s.table||[]);
   const home = get('HOME'), away = get('AWAY');
   let list;
   if(!home.length || !away.length){
@@ -2267,7 +2273,7 @@ const OA_SPORT = {PL:'soccer_epl', PD:'soccer_spain_la_liga', SA:'soccer_italy_s
                   PPL:'soccer_portugal_primeira_liga', BSA:'soccer_brazil_campeonato',
                   MLS:'soccer_usa_mls', LMX:'soccer_mexico_ligamx',
                   ARG:'soccer_argentina_primera_division', TUR:'soccer_turkey_super_league',
-                  SCO:'soccer_spl', BEL:'soccer_belgium_first_div'};
+                  SCO:'soccer_spl', BEL:'soccer_belgium_first_div', WC:'soccer_fifa_world_cup'};
 async function oddsApiLeague(code){
   if(!srcEnabled.oa || !OA_SPORT[code]) return null;
   const ck = 'scoriq_oa_'+code;
@@ -3909,7 +3915,7 @@ function showView(v){
 // ---------- League pills ----------
 const FLAGS = {PL:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', PD:'🇪🇸', SA:'🇮🇹', BL1:'🇩🇪', FL1:'🇫🇷',
                ELC:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', DED:'🇳🇱', PPL:'🇵🇹', BSA:'🇧🇷', MLS:'🇺🇸',
-               LMX:'🇲🇽', ARG:'🇦🇷', TUR:'🇹🇷', SCO:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', BEL:'🇧🇪'};
+               LMX:'🇲🇽', ARG:'🇦🇷', TUR:'🇹🇷', SCO:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', BEL:'🇧🇪', WC:'🏆'};
 function renderLeaguePills(){
   const cur = $('league').value;
   $('lgPills').innerHTML = [...$('league').options].map(o=>
@@ -3926,7 +3932,7 @@ function renderLeaguePills(){
 const COUNTRIES = {PL:'England', PD:'Spain', SA:'Italy', BL1:'Germany', FL1:'France',
                    ELC:'England', DED:'Netherlands', PPL:'Portugal', BSA:'Brazil',
                    MLS:'USA', LMX:'Mexico', ARG:'Argentina', TUR:'Turkey',
-                   SCO:'Scotland', BEL:'Belgium'};
+                   SCO:'Scotland', BEL:'Belgium', WC:'International'};
 let fxFilter = 'ALL';
 
 function renderLeagueGrid(){
